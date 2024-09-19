@@ -40,6 +40,39 @@ contract Staking is Ownable {
         return pools.length;
     }
 
+    event AddPool(
+        uint indexed pid,
+        IERC20 _yieldToekn,
+        uint _startTime,
+        uint _durationSenconds,
+        IERC20[] _pledgeToken,
+        uint[] _perSecondsRewards,
+        address _projectLeader
+    );
+
+    event Deposit(
+        uint indexed pid,
+        address indexed user,
+        uint indexed tokenIndex,
+        uint amount
+    );
+
+    event ProjectLeaderWithDraw(uint indexed pid, address indexed user);
+
+    event WithdrawPledge(
+        uint indexed pid,
+        address indexed user,
+        uint indexed tokenIndex,
+        uint amount
+    );
+    
+    event WithdrawRewards(
+        uint indexed pid,
+        address indexed user,
+        uint indexed tokenIndex,
+        uint amount
+    );
+
     function addPool(
         IERC20 _yieldToekn, // 收益的token
         uint _startTime, // 开始时间
@@ -81,6 +114,16 @@ contract Staking is Ownable {
                 noAllocatedRewards: _totalLpSupply
             })
         );
+
+        emit AddPool(
+            pools.length - 1,
+            _yieldToekn,
+            _startTime,
+            _durationSenconds,
+            _pledgeToken,
+            _perSecondsRewards,
+            _projectLeader
+        );
     }
 
     // 质押代币
@@ -114,6 +157,7 @@ contract Staking is Ownable {
         user.theoreticalYield = user.amount * pool.perLpRewards[tokenIndex];
 
         pool.totalLpSupply[tokenIndex] += amount;
+        emit Deposit(pid, msg.sender, tokenIndex, amount);
     }
 
     // 取出质押的代币
@@ -137,6 +181,7 @@ contract Staking is Ownable {
         user.theoreticalYield = user.amount * pool.perLpRewards[tokenIndex];
         pool.totalLpSupply[tokenIndex] -= amount;
         pool.pledgeToken[tokenIndex].safeTransfer(msg.sender, amount);
+        emit WithdrawPledge(pid, msg.sender, tokenIndex, amount);
     }
 
     // 取走获得的奖金
@@ -152,6 +197,7 @@ contract Staking is Ownable {
         user.yield -= amount;
         user.withDrawYield += amount;
         pool.pledgeToken[tokenIndex].safeTransfer(msg.sender, amount);
+        emit WithdrawRewards(pid, msg.sender, tokenIndex, amount);
     }
 
     // 取走质押的金额和奖金
@@ -220,6 +266,7 @@ contract Staking is Ownable {
             amount += pool.noAllocatedRewards[i];
         }
         pool.lpToken.safeTransfer(msg.sender, amount);
+        emit ProjectLeaderWithDraw(pid, msg.sender);
     }
 
     // 获取用户没有提取的奖励数量
